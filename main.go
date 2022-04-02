@@ -4,76 +4,60 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"unsafe"
 
 	"github.com/keppy/pour"
 	"github.com/urfave/cli/v2"
 	"github.com/valyala/fasthttp"
 )
 
+func b2s(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
+
+}
+
 func main() {
+	var uri string
+
 	app := &cli.App{
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "uri",
+				Value:       "http://localhost:8969",
+				Aliases:     []string{"u"},
+				Usage:       "URI for the POST",
+				Destination: &uri,
+			},
+		},
 		Commands: []*cli.Command{
-			{
-				Name:    "post",
-				Aliases: []string{"p"},
-				Usage:   "post form to endpoint",
-				Action: func(c *cli.Context) error {
-					fmt.Println("posting data: ", c.Args().First())
-					fmt.Println("to endpoint: ", c.Args().Tail())
-					return nil
-				},
-			},
-			{
-				Name:    "get",
-				Aliases: []string{"g"},
-				Usage:   "get a http endpoint",
-				Action: func(c *cli.Context) error {
-					fmt.Println("get: ", c.Args().First())
-					return nil
-				},
-			},
 			{
 				Name:    "json",
 				Aliases: []string{"j"},
-				Usage:   "options for json",
-				Subcommands: []*cli.Command{
-					{
-						Name:  "post",
-						Usage: "POST JSON to endpoint",
-						Action: func(c *cli.Context) error {
-							fmt.Println("json post: ", c.Args().First())
+				Usage:   "post json",
+				Action: func(c *cli.Context) error {
+					fmt.Println("json post: ", c.Args().First())
 
-							req := fasthttp.AcquireRequest()
+					req := fasthttp.AcquireRequest()
 
-							pour.JSON(c.Args().First(), req.BodyWriter())
+					pour.JSON(c.Args().First(), req.BodyWriter())
 
-							req.Header.SetMethod("POST")
-							req.Header.SetContentType("application/json")
-							req.SetRequestURI("http://localhost:3000")
+					req.Header.SetMethod("POST")
+					req.Header.SetContentType("application/json")
+					req.SetRequestURI(uri)
 
-							res := fasthttp.AcquireResponse()
+					res := fasthttp.AcquireResponse()
 
-							if err := fasthttp.Do(req, res); err != nil {
-								panic("handle error")
+					if err := fasthttp.Do(req, res); err != nil {
+						fmt.Println("err: ", err)
+						panic("handle error")
+					}
+					fasthttp.ReleaseRequest(req)
 
-							}
-							fasthttp.ReleaseRequest(req)
+					body := res.Body()
+					fmt.Println("response body: ", b2s(body))
 
-							body := res.Body()
-							fmt.Println("response body: ", body)
-
-							fasthttp.ReleaseResponse(res) // Only when you are done with body!
-							return nil
-						},
-					},
-					{
-						Name:  "get",
-						Usage: "GET JSON from endpoint",
-						Action: func(c *cli.Context) error {
-							fmt.Println("json get: ", c.Args().First())
-							return nil
-						},
-					},
+					fasthttp.ReleaseResponse(res) // Only when you are done with body!
+					return nil
 				},
 			},
 		},
