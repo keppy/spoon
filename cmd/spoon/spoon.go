@@ -23,7 +23,7 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "uri",
-				Value:       "http://localhost:8969",
+				Value:       "http://localhost:3000/signup",
 				Aliases:     []string{"u"},
 				Usage:       "URI for the POST",
 				Destination: &uri,
